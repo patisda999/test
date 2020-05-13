@@ -1,5 +1,7 @@
 library(DMwR)
 library(pls)
+library(stats)
+library(MASS)
 pls_part1 = function(x,y){
   #x,y定義
   x<-as.data.frame(x)
@@ -75,6 +77,9 @@ pls_weighting = function(pls){
   
   return(weight_sort)
 }
+Tsqr = function(dat,matrixcov){
+  apply(dat, 1, function(i) { i %*% matrixcov %*% i })
+}
 df =read.csv("FHS_strk-4.csv")
 x_cols = c('AGE','SEX','SYSBP','DIABP','BPMEDS','CURSMOKE','CIGPDAY','TOTCHOL','HDLC','LDLC','BMI','GLUCOSE','HEARTRTE')
 x_df = df[,x_cols]
@@ -87,13 +92,57 @@ y_df = df[,y_cols]
 result = pls_part1(x_df,y_df)
 
 pls<-pls_part2(9,result$pls_overview)
-weight=plstep2_weighting(pls)
+weight=pls_weighting(pls)
 xloading=pls$loadings[]
 yloading=pls$Yloadings[]
-key=rep(F,length(pls_res$weight[,1]))
+key=rep(F,length(weight[,1]))
 
 
 
 weight_hyp=weight[order(weight[,"PREVHYP"],decreasing = T),]
 weight_dia=weight[order(weight[,"DIABETES"],decreasing = T),]
+
+#PREVHYP部分
+data_scale<-scale(x_df[,c('SYSBP','DIABP','AGE','BMI','GLUCOSE')])
+corr<-cor(data_scale,use = "complete.obs")
+E<-eigen(corr)
+score<-data.frame(data_scale%*%E$vectors)
+evs<-round(E$values,digits = 5)
+eigentable=data.frame("a"=evs,"b"=round(cumsum(evs)/sum(evs)*100,5))
+names(eigentable)=c("特徵值","累積解釋量(%)")
+row.names(eigentable)=paste("PC",1:length(eigentable[,1]),sep="")
+
+eigentable
+
+dat=scale(as.matrix(score[,1:3,drop=F]),T,F)
+varcov=cov(dat)
+matrixcov=ginv(varcov)
+tscore=Tsqr(dat = dat,matrixcov = matrixcov)
+
+
+mean_tscore = mean(tscore)
+anova_df_hyp = data.frame(range = as.numeric(tscore >mean_tscore)+1,PREVHYP = df$PREVHYP)
+anova(lm(PREVHYP~range,data = anova_df_hyp))
+
+#DIABETES
+data_scale<-scale(x_df[,c('SYSBP','DIABP','GLUCOSE')])
+corr<-cor(data_scale,use = "complete.obs")
+E<-eigen(corr)
+score<-data.frame(data_scale%*%E$vectors)
+evs<-round(E$values,digits = 5)
+eigentable=data.frame("a"=evs,"b"=round(cumsum(evs)/sum(evs)*100,5))
+names(eigentable)=c("特徵值","累積解釋量(%)")
+row.names(eigentable)=paste("PC",1:length(eigentable[,1]),sep="")
+
+eigentable
+
+dat=scale(as.matrix(score[,1:2,drop=F]),T,F)
+varcov=cov(dat)
+matrixcov=ginv(varcov)
+tscore=Tsqr(dat = dat,matrixcov = matrixcov)
+
+
+mean_tscore = mean(tscore)
+anova_df_dia = data.frame(range = as.numeric(tscore >mean_tscore)+1,DIABETES = df$DIABETES)
+anova(lm(DIABETES~range,data = anova_df_dia))
 
