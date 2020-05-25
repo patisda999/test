@@ -153,3 +153,36 @@ mean_tscore = mean(tscore)
 anova_df_B = data.frame(range = as.numeric(tscore >mean_tscore)+1,DIABETES = df$DIABETES)
 anova(lm(DIABETES~range,data = anova_df_B))
 
+# 參數說明  name 為欄位名稱  df 為資料集 type 連續選con 類別選class
+single_fac_info = function(name,df,type = c("con","class")){
+  data = df[,name]
+  data = data[!is.na(data)]
+  par(mfcol=c(2,1))
+  switch(type,
+         "con" = {
+           temp = table(data)
+           info_data = list(
+           ma = mean(data), #平均
+           med = median(data), #中位
+           mode = names(temp[temp==max(temp)]), #眾數
+           sd_data = sd(data), #標準差
+           var_data = var(data), #變異數
+           hi = hist(data,xlab = name), #直方
+           scatter = plot(data,ylab = name) #散佈
+           )
+         },
+         "class" = {
+           temp = table(data)
+           info_data = list(
+           med = median(data), #中位
+           iqr = IQR(data), #4分位距
+           mode = names(temp[temp==max(temp)]), #眾數
+           max_dis = max(data)-min(data), #全距
+           box = boxplot(data,ylab = name), #盒鬚圖
+           bar = hist(data,ylab = name)) #長條圖
+         })
+return(info_data)
+}
+
+single_fac_info("SYSBP",df,type="con") #高血壓
+single_fac_info("DEATH",df,type="class") #死亡與否
