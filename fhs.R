@@ -184,5 +184,6 @@ single_fac_info = function(name,df,type = c("con","class")){
 return(info_data)
 }
 
+
 single_fac_info("SYSBP",df,type="con") #高血壓
 single_fac_info("DEATH",df,type="class") #死亡與否
